@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{.Title}}</title>
+    <style>
+      th, td { padding-left: 1em; border-bottom: 1px solid #ddd; }
+    </style>
+  </head>
+  <body>
+    <h1>Classes</h1>
+    <dl>
+    {{ range .Classes }}
+    <dt><a href="#{{ .Name }}">{{ .Name }}</a></dt>
+    <dd>{{ .Description }}</dd>
+    {{ end }}
+    </dl>
+
+    {{ range .Classes }}
+    {{ $className := .Name }}
+    <h1 id="{{ .Name }}">Class {{ $className }}</h1>
+    <p>{{ .Description }}</p>
+
+    {{ if .Properties }}
+    <h2>Properties</h2>
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        {{ range .Properties }}
+        <tr>
+          <td>{{ .Name }}</td>
+          <td>{{ .Type }}</td>
+          <td>{{ .Description }}</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    {{ end }}
+
+    {{ range .Constructors }}
+    <h2>Constructor {{ $className }}(
+    {{- range $index, $element := .Parameters }}{{ if $index }}, {{ end }}{{ $element.Name }}{{ end -}}
+    )</h2>
+    <p>{{ .Description }}</p>
+    {{ if .Parameters }}
+    <h3>Parameters</h3>
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        {{ range .Parameters }}
+        <tr>
+          <td>{{ .Name }}</td>
+          <td>{{ .Type }}</td>
+          <td>{{ .Description }}</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    {{ end }}
+    {{ end }}
+
+    {{ range .Methods }}
+    <h2>Method {{ .Name }}(
+    {{- range $index, $element := .Parameters }}{{ if $index }}, {{ end }}{{ $element.Name }}{{ end -}}
+    )</h2>
+    <p>{{ .Description }}</p>
+
+    {{ if .Parameters }}
+    <h3>Parameters</h3>
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        {{ range .Parameters }}
+        <tr>
+          <td>{{ .Name }}</td>
+          <td>{{ .Type }}</td>
+          <td>{{ .Description }}</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    {{ end }}
+
+    {{ if or .Returns.Type .Returns.Description }}
+    <h3>Returns</h3>
+    <table>
+      <thead><tr><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>{{ .Returns.Type }}</td>
+          <td>{{ .Returns.Description }}</td>
+        </tr>
+      </tbody>
+    </table>
+    {{ end }}
+
+    {{ end }}
+
+    {{ end }}
+  </body>
+  <footer>
+    (C) mastercard
+  </footer>
+</html>
