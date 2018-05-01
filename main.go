@@ -402,9 +402,7 @@ func savePdf(html string, out string) {
 }
 
 func normalize(classes []Class) map[string][]Class {
-	namespaces := map[string][]Class{
-		"Global": nil,
-	}
+	namespaces := map[string][]Class{}
 	for _, cls := range classes {
 		subs := strings.Split(cls.Name, "::")
 		ns := "Global"

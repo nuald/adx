@@ -13,7 +13,7 @@
     <h2>{{ $ns }} namespace</h2>
     <dl>
     {{ range $classes }}
-    <dt><a href="#{{ .Name }}">{{ .Name }}</a></dt>
+    <dt><a href="#{{ $ns }}{{ .Name }}">{{ .Name }}</a></dt>
     <dd>{{ .Description }}</dd>
     {{ end }}
     </dl>
@@ -22,7 +22,8 @@
     {{ range $ns, $classes := .Namespaces }}
     {{ range $classes }}
     {{ $className := .Name }}
-    <h1 id="{{ .Name }}">Class {{ $className }}</h1>
+    <h1 id="{{ $ns }}{{ .Name }}">Class {{ $className }}</h1>
+    <p>Namespace: {{ $ns }}</p>
     <p>{{ .Description }}</p>
 
     {{ if .Properties }}
