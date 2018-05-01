@@ -2,21 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>{{.Title}}</title>
+    <title>{{ .Title }}</title>
     <style>
       th, td { padding-left: 1em; border-bottom: 1px solid #ddd; }
     </style>
   </head>
   <body>
     <h1>Classes</h1>
+    {{ range $ns, $classes := .Namespaces }}
+    <h2>{{ $ns }} namespace</h2>
     <dl>
-    {{ range .Classes }}
+    {{ range $classes }}
     <dt><a href="#{{ .Name }}">{{ .Name }}</a></dt>
     <dd>{{ .Description }}</dd>
     {{ end }}
     </dl>
+    {{ end }}
 
-    {{ range .Classes }}
+    {{ range $ns, $classes := .Namespaces }}
+    {{ range $classes }}
     {{ $className := .Name }}
     <h1 id="{{ .Name }}">Class {{ $className }}</h1>
     <p>{{ .Description }}</p>
@@ -60,7 +64,7 @@
     {{ end }}
 
     {{ range .Methods }}
-    <h2>Method {{ .Name }}(
+    <h2>Method{{ if .Returns.Type }} {{ .Returns.Type }}{{ end }} {{ .Name }}(
     {{- range $index, $element := .Parameters }}{{ if $index }}, {{ end }}{{ $element.Name }}{{ end -}}
     )</h2>
     <p>{{ .Description }}</p>
@@ -96,6 +100,7 @@
 
     {{ end }}
 
+    {{ end }}
     {{ end }}
   </body>
   <footer>

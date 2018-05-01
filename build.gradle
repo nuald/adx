@@ -7,7 +7,8 @@ task setupCore(type: Exec) {
 
 	commandLine 'go', 'get',
 		'github.com/alecthomas/gometalinter',
-		'github.com/go-errors/errors'
+		'github.com/go-errors/errors',
+		'github.com/go-bindata/go-bindata/...'
 }
 
 task setupLinters(type: Exec, dependsOn: setupCore) {
@@ -17,7 +18,14 @@ task setupLinters(type: Exec, dependsOn: setupCore) {
 	commandLine 'gometalinter', '--install'
 }
 
-task lint(type: Exec, dependsOn: setupLinters) {
+task assets(type: Exec, dependsOn: setupCore) {
+	group BUILD_GROUP
+	description 'Builds the assets.'
+
+	commandLine 'go-bindata', 'data/'
+}
+
+task lint(type: Exec, dependsOn: [assets, setupLinters]) {
 	group VERIFICATION_GROUP
 	description 'Lints the source code.'
 

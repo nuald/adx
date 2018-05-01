@@ -27,8 +27,6 @@ Flags:
     	the output file (the format is based on its extension)
   -src string
     	the source code dir (default ".")
-  -template string
-    	the HTML template (default "default.html")
   -title string
     	the document title
 ```

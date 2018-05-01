@@ -6,10 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -99,8 +101,214 @@ func (j js) gen(srcDir string) []Class {
 
 type java struct{}
 
+func getText(raw string) string {
+	return raw
+}
+
+// Raw XML info
+type Raw struct {
+	RawXML string `xml:",innerxml"`
+}
+
+// ParameterName info
+type ParameterName struct {
+	Name string `xml:"parametername"`
+}
+
+// ParameterItem info
+type ParameterItem struct {
+	Names       []ParameterName `xml:"parameternamelist"`
+	Description string          `xml:"parameterdescription>para"`
+}
+
+// DoxyParameter info
+type DoxyParameter struct {
+	Kind           string          `xml:"kind,attr"`
+	ParameterItems []ParameterItem `xml:"parameteritem"`
+}
+
+// SimpleSect info
+type SimpleSect struct {
+	Kind   string `xml:"kind,attr"`
+	RawXML string `xml:",innerxml"`
+}
+
+// Paragraph info
+type Paragraph struct {
+	Parameters     []DoxyParameter `xml:"parameterlist"`
+	SimpleSections []SimpleSect    `xml:"simplesect"`
+}
+
+// DetailedDesc info
+type DetailedDesc struct {
+	Paragraphs []Paragraph `xml:"para"`
+}
+
+// Param info
+type Param struct {
+	Type Raw    `xml:"type"`
+	Name string `xml:"declname"`
+}
+
+// MemberDef info
+type MemberDef struct {
+	Kind         string       `xml:"kind,attr"`
+	Name         string       `xml:"name"`
+	Type         Raw          `xml:"type"`
+	Description  string       `xml:"briefdescription>para"`
+	Parameters   []Param      `xml:"param"`
+	DetailedDesc DetailedDesc `xml:"detaileddescription"`
+}
+
+// SectionDef info
+type SectionDef struct {
+	Kind    string      `xml:"kind,attr"`
+	Members []MemberDef `xml:"memberdef"`
+}
+
+// CompoundDef info
+type CompoundDef struct {
+	Kind        string       `xml:"kind,attr"`
+	Name        string       `xml:"compoundname"`
+	Sections    []SectionDef `xml:"sectiondef"`
+	Description string       `xml:"briefdescription>para"`
+}
+
+func genDoxyMethod(member MemberDef, sectionKind string) Method {
+	returnDesc := ""
+	var parameters []Parameter
+	paramDesc := map[string]string{}
+	for _, para := range member.DetailedDesc.Paragraphs {
+		for _, sect := range para.SimpleSections {
+			if sect.Kind == "return" {
+				returnDesc = getText(sect.RawXML)
+			}
+		}
+		for _, param := range para.Parameters {
+			if param.Kind == "param" {
+				for _, item := range param.ParameterItems {
+					for _, name := range item.Names {
+						paramDesc[name.Name] = item.Description
+					}
+				}
+			}
+		}
+	}
+	for _, param := range member.Parameters {
+		name := param.Name
+		parameters = append(parameters, Parameter{
+			Name:        name,
+			Type:        getText(param.Type.RawXML),
+			Description: paramDesc[name],
+		})
+	}
+	ret := Returns{
+		Type:        getText(member.Type.RawXML),
+		Description: returnDesc,
+	}
+	access := ""
+	if sectionKind == "public-static-func" {
+		access = "static"
+	}
+	return Method{
+		Name:        member.Name,
+		Description: member.Description,
+		Returns:     ret,
+		Parameters:  parameters,
+		Access:      access,
+	}
+}
+
+func genDoxyClass(def CompoundDef) Class {
+	cls := Class{
+		Name:        def.Name,
+		Description: def.Description,
+	}
+	for _, section := range def.Sections {
+		sectionKind := section.Kind
+		if sectionKind == "public-static-attrib" {
+			for _, member := range section.Members {
+				prop := Property{
+					Name:        member.Name,
+					Description: member.Description,
+					Type:        getText(member.Type.RawXML),
+					Access:      "static",
+				}
+				cls.Properties = append(cls.Properties, prop)
+			}
+		}
+		if sectionKind == "public-static-func" || sectionKind == "public-func" {
+			for _, member := range section.Members {
+				method := genDoxyMethod(member, sectionKind)
+				if method.Returns.Type == "" {
+					cls.Constructors = append(cls.Constructors, method)
+				} else {
+					cls.Methods = append(cls.Methods, method)
+				}
+			}
+		}
+	}
+	return cls
+}
+
 func (j java) gen(srcDir string) []Class {
-	return nil
+	type Result struct {
+		XMLName xml.Name      `xml:"doxygen"`
+		Defs    []CompoundDef `xml:"compounddef"`
+	}
+
+	javaDoxyfile := renderTemplate("data/java.doxyfile", struct {
+		Src string
+	}{
+		srcDir,
+	})
+
+	docsDir := "build/docs"
+	if err := os.MkdirAll(docsDir, 0700); err != nil {
+		log.Fatal(err)
+	}
+
+	cmd := newCmd("doxygen", "-")
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		defer func() {
+			if err = stdin.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
+		if _, err = io.WriteString(stdin, javaDoxyfile); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	if err = cmd.Run(); err != nil {
+		log.Fatal(err)
+	}
+
+	xmlDir := path.Join(docsDir, "xml")
+	cmd = newCmd("xsltproc", "combine.xslt", "index.xml")
+	cmd.Dir = xmlDir
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var v Result
+	if err = xml.Unmarshal(out, &v); err != nil {
+		log.Fatal(err)
+	}
+
+	var classes []Class
+	for _, def := range v.Defs {
+		if def.Kind == "class" {
+			classes = append(classes, genDoxyClass(def))
+		}
+	}
+
+	return classes
 }
 
 var generators = map[string]generator{
@@ -108,8 +316,8 @@ var generators = map[string]generator{
 	"java": new(java),
 }
 
-func renderTemplate(tplFile string, title string, classes []Class) string {
-	tpl, err := ioutil.ReadFile(tplFile)
+func renderTemplate(tplFile string, data interface{}) string {
+	tpl, err := Asset(tplFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,18 +328,22 @@ func renderTemplate(tplFile string, title string, classes []Class) string {
 	}
 
 	var buf bytes.Buffer
-	err = t.Execute(&buf, struct {
-		Title   string
-		Classes []Class
-	}{
-		title,
-		classes,
-	})
+	err = t.Execute(&buf, data)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	return buf.String()
+}
+
+func renderHTML(title string, namespaces map[string][]Class) string {
+	return renderTemplate("data/default.html", struct {
+		Title      string
+		Namespaces map[string][]Class
+	}{
+		title,
+		namespaces,
+	})
 }
 
 func printUsage() {
@@ -189,7 +401,27 @@ func savePdf(html string, out string) {
 	}
 }
 
+func normalize(classes []Class) map[string][]Class {
+	namespaces := map[string][]Class{
+		"Global": nil,
+	}
+	for _, cls := range classes {
+		subs := strings.Split(cls.Name, "::")
+		ns := "Global"
+		if len(subs) > 1 {
+			ns = strings.Join(subs[:len(subs)-1], ".")
+			cls.Name = subs[len(subs)-1]
+		}
+		namespaces[ns] = append(namespaces[ns], cls)
+	}
+	return namespaces
+}
+
 func main() {
+	// Pre-validation
+	_ = MustAsset("data/default.html")
+	_ = AssetNames()
+
 	var keys []string
 	for key := range generators {
 		keys = append(keys, key)
@@ -198,7 +430,6 @@ func main() {
 		strings.Join(keys, ", "))
 	lang := flag.String("lang", "", langDesc)
 	srcDir := flag.String("src", ".", "the source code dir")
-	tplFile := flag.String("template", "default.html", "the HTML template")
 	title := flag.String("title", "", "the document title")
 	out := flag.String("out", "", "the output file (the format is based on its extension)")
 	flag.Parse()
@@ -207,7 +438,7 @@ func main() {
 		fmt.Printf("Can't find a documentation generator for %s\n\n", *lang)
 		printUsage()
 	} else {
-		html := renderTemplate(*tplFile, *title, gen.gen(*srcDir))
+		html := renderHTML(*title, normalize(gen.gen(*srcDir)))
 		if *out == "" {
 			fmt.Println(html)
 		} else {
