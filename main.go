@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -27,27 +28,27 @@ func newCmd(name string, args ...string) *exec.Cmd {
 
 // Returns info for method
 type Returns struct {
-	Type        string `xml:"type"`
-	Description string `xml:"description"`
+	Type        template.HTML `xml:"type"`
+	Description template.HTML `xml:"description"`
 }
 
 // Parameter of method
 type Parameter struct {
-	Name        string `xml:"name"`
-	Type        string `xml:"type"`
-	Description string `xml:"description"`
-	Default     string `xml:"default"`
-	Optional    string `xml:"optional"`
-	Nullable    string `xml:"nullable"`
+	Name        string        `xml:"name"`
+	Type        template.HTML `xml:"type"`
+	Description string        `xml:"description"`
+	Default     string        `xml:"default"`
+	Optional    string        `xml:"optional"`
+	Nullable    string        `xml:"nullable"`
 }
 
 // Property of class
 type Property struct {
-	Name        string `xml:"name"`
-	Description string `xml:"description"`
-	Access      string `xml:"access"`
-	Virtual     string `xml:"virtual"`
-	Type        string `xml:"type"`
+	Name        string        `xml:"name"`
+	Description string        `xml:"description"`
+	Access      string        `xml:"access"`
+	Virtual     string        `xml:"virtual"`
+	Type        template.HTML `xml:"type"`
 }
 
 // Method of class
@@ -70,6 +71,7 @@ type Class struct {
 	Constructors []Method   `xml:"constructor"`
 	Methods      []Method   `xml:"functions"`
 	Properties   []Property `xml:"properties"`
+	Ref          string
 }
 
 type generator interface {
@@ -101,8 +103,15 @@ func (j js) gen(srcDir string) []Class {
 
 type java struct{}
 
-func getText(raw string) string {
-	return raw
+func getText(raw string) template.HTML {
+	r := regexp.MustCompile("<ref refid=\"(\\w+)\" kindref=\"compound\">(\\w+)</ref>")
+	m := r.FindStringSubmatch(raw)
+	if m != nil {
+		// #nosec
+		return template.HTML(fmt.Sprintf("<a href=\"#%s\">%s</a>", m[1], m[2]))
+	}
+	// #nosec
+	return template.HTML(raw)
 }
 
 // Raw XML info
@@ -169,13 +178,14 @@ type SectionDef struct {
 // CompoundDef info
 type CompoundDef struct {
 	Kind        string       `xml:"kind,attr"`
+	Ref         string       `xml:"id,attr"`
 	Name        string       `xml:"compoundname"`
 	Sections    []SectionDef `xml:"sectiondef"`
 	Description string       `xml:"briefdescription>para"`
 }
 
 func genDoxyMethod(member MemberDef, sectionKind string) Method {
-	returnDesc := ""
+	var returnDesc template.HTML
 	var parameters []Parameter
 	paramDesc := map[string]string{}
 	for _, para := range member.DetailedDesc.Paragraphs {
@@ -223,6 +233,7 @@ func genDoxyClass(def CompoundDef) Class {
 	cls := Class{
 		Name:        def.Name,
 		Description: def.Description,
+		Ref:         def.Ref,
 	}
 	for _, section := range def.Sections {
 		sectionKind := section.Kind
@@ -409,6 +420,9 @@ func normalize(classes []Class) map[string][]Class {
 		if len(subs) > 1 {
 			ns = strings.Join(subs[:len(subs)-1], ".")
 			cls.Name = subs[len(subs)-1]
+		}
+		if cls.Ref == "" {
+			cls.Ref = ns + cls.Name
 		}
 		namespaces[ns] = append(namespaces[ns], cls)
 	}
