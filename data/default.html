@@ -86,7 +86,7 @@
     </table>
     {{ end }}
 
-    {{ if or .Returns.Type .Returns.Description }}
+    {{ if not .Returns.Skip }}
     <h3>Returns</h3>
     <table>
       <thead><tr><th>Type</th><th>Description</th></tr></thead>

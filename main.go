@@ -30,6 +30,7 @@ func newCmd(name string, args ...string) *exec.Cmd {
 type Returns struct {
 	Type        template.HTML `xml:"type"`
 	Description template.HTML `xml:"description"`
+	Skip        bool
 }
 
 // Parameter of method
@@ -184,6 +185,16 @@ type CompoundDef struct {
 	Description string       `xml:"briefdescription>para"`
 }
 
+func genDoxyMethodReturn(member MemberDef, returnDesc template.HTML) Returns {
+	returnType := getText(member.Type.RawXML)
+	noReturnInfo := returnType == "" && returnDesc == ""
+	return Returns{
+		Type:        returnType,
+		Description: returnDesc,
+		Skip:        returnType == "void" || noReturnInfo,
+	}
+}
+
 func genDoxyMethod(member MemberDef, sectionKind string) Method {
 	var returnDesc template.HTML
 	var parameters []Parameter
@@ -212,10 +223,7 @@ func genDoxyMethod(member MemberDef, sectionKind string) Method {
 			Description: paramDesc[name],
 		})
 	}
-	ret := Returns{
-		Type:        getText(member.Type.RawXML),
-		Description: returnDesc,
-	}
+	ret := genDoxyMethodReturn(member, returnDesc)
 	access := ""
 	if sectionKind == "public-static-func" {
 		access = "static"
