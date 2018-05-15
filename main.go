@@ -273,6 +273,12 @@ func genDoxyClass(def CompoundDef) Class {
 	return cls
 }
 
+func createDir(dir string) {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func (j java) genClasses(xmlContent []byte) []Class {
 	type Result struct {
 		XMLName xml.Name      `xml:"doxygen"`
@@ -302,9 +308,7 @@ func (j java) genXML(srcDir string) []byte {
 	})
 
 	docsDir := "build/docs"
-	if err := os.MkdirAll(docsDir, 0700); err != nil {
-		log.Fatal(err)
-	}
+	createDir(docsDir)
 
 	cmd := newCmd("doxygen", "-")
 	stdin, err := cmd.StdinPipe()
@@ -466,6 +470,7 @@ func main() {
 		printUsage()
 	} else {
 		xmlContent := gen.genXML(*srcDir)
+		createDir(filepath.Dir(*out))
 		ext := filepath.Ext(*out)
 		if ext == ".xml" {
 			save(xmlContent, *out)
