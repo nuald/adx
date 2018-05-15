@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -76,30 +75,34 @@ type Class struct {
 }
 
 type generator interface {
-	gen(srcDir string) []Class
+	genXML(srcDir string) []byte
+	genClasses(xmlContent []byte) []Class
 }
 
 type js struct{}
 
-func (j js) gen(srcDir string) []Class {
+func (j js) genClasses(xmlContent []byte) []Class {
 	type Result struct {
 		XMLName xml.Name `xml:"jsdoc"`
 		Classes []Class  `xml:"classes"`
 	}
 
+	var v Result
+	if err := xml.Unmarshal(xmlContent, &v); err != nil {
+		log.Fatal(err)
+	}
+
+	return v.Classes
+}
+
+func (j js) genXML(srcDir string) []byte {
 	cmd := newCmd("jsdoc", "-t", "templates/haruki", srcDir, "-d", "console",
 		"-q", "format=xml")
 	out, err := cmd.Output()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	var v Result
-	if err = xml.Unmarshal(out, &v); err != nil {
-		log.Fatal(err)
-	}
-
-	return v.Classes
+	return out
 }
 
 type java struct{}
@@ -270,12 +273,28 @@ func genDoxyClass(def CompoundDef) Class {
 	return cls
 }
 
-func (j java) gen(srcDir string) []Class {
+func (j java) genClasses(xmlContent []byte) []Class {
 	type Result struct {
 		XMLName xml.Name      `xml:"doxygen"`
 		Defs    []CompoundDef `xml:"compounddef"`
 	}
 
+	var v Result
+	if err := xml.Unmarshal(xmlContent, &v); err != nil {
+		log.Fatal(err)
+	}
+
+	var classes []Class
+	for _, def := range v.Defs {
+		if def.Kind == "class" {
+			classes = append(classes, genDoxyClass(def))
+		}
+	}
+
+	return classes
+}
+
+func (j java) genXML(srcDir string) []byte {
 	javaDoxyfile := renderTemplate("data/java.doxyfile", struct {
 		Src string
 	}{
@@ -299,7 +318,7 @@ func (j java) gen(srcDir string) []Class {
 				log.Fatal(err)
 			}
 		}()
-		if _, err = io.WriteString(stdin, javaDoxyfile); err != nil {
+		if _, err = stdin.Write(javaDoxyfile); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -315,19 +334,7 @@ func (j java) gen(srcDir string) []Class {
 		log.Fatal(err)
 	}
 
-	var v Result
-	if err = xml.Unmarshal(out, &v); err != nil {
-		log.Fatal(err)
-	}
-
-	var classes []Class
-	for _, def := range v.Defs {
-		if def.Kind == "class" {
-			classes = append(classes, genDoxyClass(def))
-		}
-	}
-
-	return classes
+	return out
 }
 
 var generators = map[string]generator{
@@ -335,7 +342,7 @@ var generators = map[string]generator{
 	"java": new(java),
 }
 
-func renderTemplate(tplFile string, data interface{}) string {
+func renderTemplate(tplFile string, data interface{}) []byte {
 	tpl, err := Asset(tplFile)
 	if err != nil {
 		log.Fatal(err)
@@ -352,10 +359,10 @@ func renderTemplate(tplFile string, data interface{}) string {
 		log.Fatal(err)
 	}
 
-	return buf.String()
+	return buf.Bytes()
 }
 
-func renderHTML(title string, namespaces map[string][]Class) string {
+func renderHTML(title string, namespaces map[string][]Class) []byte {
 	return renderTemplate("data/default.html", struct {
 		Title      string
 		Namespaces map[string][]Class
@@ -366,20 +373,20 @@ func renderHTML(title string, namespaces map[string][]Class) string {
 }
 
 func printUsage() {
-	fmt.Println("Usage: adx -lang=(lang) -src=(src-dir) -title=(title) -out=(out.[html|pdf])")
-	fmt.Println("Converts the source code's auto-generated documentation to HTML and PDF.")
+	fmt.Println("Usage: adx -lang=(lang) -src=(src-dir) -title=(title) -out=(out.[html|pdf|xml])")
+	fmt.Println("Produces the code's auto-generated documentation in HTML, PDF or original XML.")
 	fmt.Println()
 	fmt.Println("Flags:")
 	flag.PrintDefaults()
 }
 
-func saveHTML(html string, out string) {
-	if err := ioutil.WriteFile(out, []byte(html), 0644); err != nil {
+func save(content []byte, out string) {
+	if err := ioutil.WriteFile(out, content, 0644); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func savePdf(html string, out string) {
+func savePdf(html []byte, out string) {
 	path, err := exec.LookPath("chrome")
 	if err != nil {
 		path, err = exec.LookPath("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
@@ -398,7 +405,7 @@ func savePdf(html string, out string) {
 		}
 	}()
 
-	if _, err = tmpfile.Write([]byte(html)); err != nil {
+	if _, err = tmpfile.Write(html); err != nil {
 		log.Fatal(err)
 	}
 
@@ -458,13 +465,14 @@ func main() {
 		fmt.Printf("Can't find a documentation generator for %s\n\n", *lang)
 		printUsage()
 	} else {
-		html := renderHTML(*title, normalize(gen.gen(*srcDir)))
-		if *out == "" {
-			fmt.Println(html)
+		xmlContent := gen.genXML(*srcDir)
+		ext := filepath.Ext(*out)
+		if ext == ".xml" {
+			save(xmlContent, *out)
 		} else {
-			ext := filepath.Ext(*out)
+			html := renderHTML(*title, normalize(gen.genClasses(xmlContent)))
 			if ext == ".html" {
-				saveHTML(html, *out)
+				save(html, *out)
 			} else if ext == ".pdf" {
 				savePdf(html, *out)
 			} else {
