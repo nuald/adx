@@ -76,6 +76,7 @@ type Class struct {
 
 type generator interface {
 	genXML(srcDir string) []byte
+	combineXML(a []byte, b []byte) []byte
 	genClasses(xmlContent []byte) []Class
 }
 
@@ -103,6 +104,30 @@ func (j js) genXML(srcDir string) []byte {
 		log.Fatal(err)
 	}
 	return out
+}
+
+func (j js) combineXML(a []byte, b []byte) []byte {
+	type Result struct {
+		XMLName xml.Name `xml:"jsdoc"`
+		Classes string   `xml:",innerxml"`
+	}
+	var aContent Result
+	if err := xml.Unmarshal(a, &aContent); err != nil {
+		log.Fatal(err)
+	}
+
+	var bContent Result
+	if err := xml.Unmarshal(b, &bContent); err != nil {
+		log.Fatal(err)
+	}
+
+	aContent.Classes = aContent.Classes + bContent.Classes
+	output, err := xml.Marshal(aContent)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return output
 }
 
 type java struct{}
@@ -341,6 +366,31 @@ func (j java) genXML(srcDir string) []byte {
 	return out
 }
 
+func (j java) combineXML(a []byte, b []byte) []byte {
+	type Result struct {
+		XMLName xml.Name `xml:"doxygen"`
+		Defs    string   `xml:",innerxml"`
+	}
+
+	var aContent Result
+	if err := xml.Unmarshal(a, &aContent); err != nil {
+		log.Fatal(err)
+	}
+
+	var bContent Result
+	if err := xml.Unmarshal(b, &bContent); err != nil {
+		log.Fatal(err)
+	}
+
+	aContent.Defs = aContent.Defs + bContent.Defs
+	output, err := xml.Marshal(aContent)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return output
+}
+
 var generators = map[string]generator{
 	"js":   new(js),
 	"java": new(java),
@@ -377,7 +427,7 @@ func renderHTML(title string, namespaces map[string][]Class) []byte {
 }
 
 func printUsage() {
-	fmt.Println("Usage: adx -lang=(lang) -src=(src-dir) -title=(title) -out=(out.[html|pdf|xml])")
+	fmt.Println("Usage: adx -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])")
 	fmt.Println("Produces the code's auto-generated documentation in HTML, PDF or original XML.")
 	fmt.Println()
 	fmt.Println("Flags:")
@@ -448,6 +498,42 @@ func normalize(classes []Class) map[string][]Class {
 	return namespaces
 }
 
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return "the string flags"
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func getXMLContent(srcDirs arrayFlags, xmlFiles arrayFlags, gen generator) []byte {
+	var xmlContent []byte
+	for _, srcDir := range srcDirs {
+		xml := gen.genXML(srcDir)
+		if xmlContent != nil {
+			xmlContent = gen.combineXML(xmlContent, xml)
+		} else {
+			xmlContent = xml
+		}
+	}
+
+	for _, xmlFile := range xmlFiles {
+		xml, err := ioutil.ReadFile(xmlFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if xmlContent != nil {
+			xmlContent = gen.combineXML(xmlContent, xml)
+		} else {
+			xmlContent = xml
+		}
+	}
+	return xmlContent
+}
+
 func main() {
 	// Pre-validation
 	_ = MustAsset("data/default.html")
@@ -460,7 +546,12 @@ func main() {
 	langDesc := fmt.Sprintf("the source code programming language (%s)",
 		strings.Join(keys, ", "))
 	lang := flag.String("lang", "", langDesc)
-	srcDir := flag.String("src", ".", "the source code dir")
+
+	var srcDirs arrayFlags
+	var xmlFiles arrayFlags
+	flag.Var(&srcDirs, "src", "the source code dir(s)")
+	flag.Var(&xmlFiles, "xml", "the input XML file(s)")
+
 	title := flag.String("title", "", "the document title")
 	out := flag.String("out", "", "the output file (the format is based on its extension)")
 	flag.Parse()
@@ -469,7 +560,7 @@ func main() {
 		fmt.Printf("Can't find a documentation generator for %s\n\n", *lang)
 		printUsage()
 	} else {
-		xmlContent := gen.genXML(*srcDir)
+		xmlContent := getXMLContent(srcDirs, xmlFiles, gen)
 		createDir(filepath.Dir(*out))
 		ext := filepath.Ext(*out)
 		if ext == ".xml" {

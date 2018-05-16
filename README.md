@@ -20,16 +20,18 @@ in PATH.
 Please use the tool's flags to generate the corresponding output:
 
 ```
-Usage: adx -lang=(lang) -src=(src-dir) -title=(title) -out=(out.[html|pdf|xml])
-Converts the source code's auto-generated documentation to HTML and PDF.
+Usage: adx -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])
+Produces the code's auto-generated documentation in HTML, PDF or original XML.
 
 Flags:
   -lang string
-    	the source code programming language (js, java)
+      the source code programming language (js, java)
   -out string
-    	the output file (the format is based on its extension)
-  -src string
-    	the source code dir (default ".")
+      the output file (the format is based on its extension)
+  -src value
+      the source code dir(s)
   -title string
-    	the document title
+      the document title
+  -xml value
+      the input XML file(s)
 ```
