@@ -22,6 +22,7 @@
     {{ range $ns, $classes := .Namespaces }}
     {{ range $classes }}
     {{ $className := .Name }}
+    <hr>
     <h1 id="{{ .Ref }}">Class {{ $className }}</h1>
     <p>Namespace: {{ $ns }}</p>
     <p>{{ .Description }}</p>
