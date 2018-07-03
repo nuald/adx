@@ -1,0 +1,93 @@
+<adx>
+  <classes>
+    <name>Foo</name>
+    <description>Foo demo class</description>
+    <access></access>
+    <virtual></virtual>
+    <fires></fires>
+    <constructor>
+      <name></name>
+      <description>Build an ThreeDS2Widget class instance.</description>
+      <access></access>
+      <virtual></virtual>
+      <parameters>
+        <name>prop</name>
+        <type></type>
+        <description>The sample property.</description>
+        <default></default>
+        <optional></optional>
+        <nullable></nullable>
+      </parameters>
+      <returns>
+        <type></type>
+        <description></description>
+        <Skip>false</Skip>
+      </returns>
+    </constructor>
+    <functions>
+      <name>method1</name>
+      <description>The sample method.</description>
+      <access></access>
+      <virtual></virtual>
+      <parameters>
+        <name>arg</name>
+        <type></type>
+        <description>The sample argument.</description>
+        <default></default>
+        <optional></optional>
+        <nullable></nullable>
+      </parameters>
+      <returns>
+        <type></type>
+        <description>The sample return.</description>
+        <Skip>false</Skip>
+      </returns>
+    </functions>
+    <functions>
+      <name>method2</name>
+      <description>The sample method2.</description>
+      <access></access>
+      <virtual></virtual>
+      <parameters>
+        <name>arg1</name>
+        <type></type>
+        <description>The sample argument for method2.</description>
+        <default></default>
+        <optional></optional>
+        <nullable></nullable>
+      </parameters>
+      <returns>
+        <type></type>
+        <description>The sample return for method2.</description>
+        <Skip>false</Skip>
+      </returns>
+    </functions>
+    <properties>
+      <name>prop</name>
+      <description>The sample property.</description>
+      <access></access>
+      <virtual></virtual>
+      <type></type>
+    </properties>
+    <Ref></Ref>
+  </classes>
+  <classes>
+    <name>FooA</name>
+    <description>FooA demo class</description>
+    <access></access>
+    <virtual></virtual>
+    <fires></fires>
+    <functions>
+      <name>method1A</name>
+      <description>The sample method with the&#xA;two-line description.</description>
+      <access></access>
+      <virtual></virtual>
+      <returns>
+        <type></type>
+        <description></description>
+        <Skip>false</Skip>
+      </returns>
+    </functions>
+    <Ref></Ref>
+  </classes>
+</adx>

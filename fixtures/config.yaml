@@ -1,0 +1,10 @@
+kotlin:
+  extensions: ['.kt']
+  docstrings:
+    type: block
+    format: /** * */
+cpp:
+  extensions: ['.h']
+  docstrings:
+    type: line
+    format: //

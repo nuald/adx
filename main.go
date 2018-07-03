@@ -10,16 +10,17 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 func newCmd(name string, args ...string) *exec.Cmd {
 	fmt.Println(name, strings.Join(args, " "))
 
-	/* #nosec */
+	// #nosec
 	cmd := exec.Command(name, args...)
 	cmd.Stderr = os.Stderr
 	return cmd
@@ -75,62 +76,10 @@ type Class struct {
 }
 
 type generator interface {
-	genXML(srcDir string) []byte
-	combineXML(a []byte, b []byte) []byte
+	genIntermediate(srcDir string) []byte
+	combineIntermediate(a []byte, b []byte) []byte
 	genClasses(xmlContent []byte) []Class
 }
-
-type js struct{}
-
-func (j js) genClasses(xmlContent []byte) []Class {
-	type Result struct {
-		XMLName xml.Name `xml:"jsdoc"`
-		Classes []Class  `xml:"classes"`
-	}
-
-	var v Result
-	if err := xml.Unmarshal(xmlContent, &v); err != nil {
-		log.Fatal(err)
-	}
-
-	return v.Classes
-}
-
-func (j js) genXML(srcDir string) []byte {
-	cmd := newCmd("jsdoc", "-t", "templates/haruki", srcDir, "-d", "console",
-		"-q", "format=xml")
-	out, err := cmd.Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return out
-}
-
-func (j js) combineXML(a []byte, b []byte) []byte {
-	type Result struct {
-		XMLName xml.Name `xml:"jsdoc"`
-		Classes string   `xml:",innerxml"`
-	}
-	var aContent Result
-	if err := xml.Unmarshal(a, &aContent); err != nil {
-		log.Fatal(err)
-	}
-
-	var bContent Result
-	if err := xml.Unmarshal(b, &bContent); err != nil {
-		log.Fatal(err)
-	}
-
-	aContent.Classes = aContent.Classes + bContent.Classes
-	output, err := xml.Marshal(aContent)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return output
-}
-
-type java struct{}
 
 func getText(raw string) template.HTML {
 	r := regexp.MustCompile("<ref refid=\"(\\w+)\" kindref=\"compound\">(\\w+)</ref>")
@@ -304,93 +253,6 @@ func createDir(dir string) {
 	}
 }
 
-func (j java) genClasses(xmlContent []byte) []Class {
-	type Result struct {
-		XMLName xml.Name      `xml:"doxygen"`
-		Defs    []CompoundDef `xml:"compounddef"`
-	}
-
-	var v Result
-	if err := xml.Unmarshal(xmlContent, &v); err != nil {
-		log.Fatal(err)
-	}
-
-	var classes []Class
-	for _, def := range v.Defs {
-		if def.Kind == "class" {
-			classes = append(classes, genDoxyClass(def))
-		}
-	}
-
-	return classes
-}
-
-func (j java) genXML(srcDir string) []byte {
-	javaDoxyfile := renderTemplate("data/java.doxyfile", struct {
-		Src string
-	}{
-		srcDir,
-	})
-
-	docsDir := "build/docs"
-	createDir(docsDir)
-
-	cmd := newCmd("doxygen", "-")
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go func() {
-		defer func() {
-			if err = stdin.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}()
-		if _, err = stdin.Write(javaDoxyfile); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	if err = cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	xmlDir := path.Join(docsDir, "xml")
-	cmd = newCmd("xsltproc", "combine.xslt", "index.xml")
-	cmd.Dir = xmlDir
-	out, err := cmd.Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return out
-}
-
-func (j java) combineXML(a []byte, b []byte) []byte {
-	type Result struct {
-		XMLName xml.Name `xml:"doxygen"`
-		Defs    string   `xml:",innerxml"`
-	}
-
-	var aContent Result
-	if err := xml.Unmarshal(a, &aContent); err != nil {
-		log.Fatal(err)
-	}
-
-	var bContent Result
-	if err := xml.Unmarshal(b, &bContent); err != nil {
-		log.Fatal(err)
-	}
-
-	aContent.Defs = aContent.Defs + bContent.Defs
-	output, err := xml.Marshal(aContent)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return output
-}
-
 var generators = map[string]generator{
 	"js":   new(js),
 	"java": new(java),
@@ -427,7 +289,7 @@ func renderHTML(title string, namespaces map[string][]Class) []byte {
 }
 
 func printUsage() {
-	fmt.Println("Usage: adx -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])")
+	fmt.Println("Usage: adx [-conf=(yaml-file)] -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])")
 	fmt.Println("Produces the code's auto-generated documentation in HTML, PDF or original XML.")
 	fmt.Println()
 	fmt.Println("Flags:")
@@ -509,29 +371,73 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
-func getXMLContent(srcDirs arrayFlags, xmlFiles arrayFlags, gen generator) []byte {
-	var xmlContent []byte
+func getIntermediateContent(srcDirs arrayFlags, gen generator) []byte {
+	var intermediateContent []byte
 	for _, srcDir := range srcDirs {
-		xml := gen.genXML(srcDir)
-		if xmlContent != nil {
-			xmlContent = gen.combineXML(xmlContent, xml)
+		content := gen.genIntermediate(srcDir)
+		if intermediateContent != nil {
+			intermediateContent = gen.combineIntermediate(intermediateContent, content)
 		} else {
-			xmlContent = xml
+			intermediateContent = content
 		}
 	}
+	return intermediateContent
+}
+
+// AdxResult XML struct
+type AdxResult struct {
+	XMLName xml.Name `xml:"adx"`
+	Classes []Class  `xml:"classes"`
+}
+
+func combineClasses(classes []Class, xmlFiles arrayFlags) []Class {
+	var v AdxResult
 
 	for _, xmlFile := range xmlFiles {
-		xml, err := ioutil.ReadFile(xmlFile)
+		xmlContent, err := ioutil.ReadFile(xmlFile)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if xmlContent != nil {
-			xmlContent = gen.combineXML(xmlContent, xml)
-		} else {
-			xmlContent = xml
+
+		if err := xml.Unmarshal(xmlContent, &v); err != nil {
+			log.Fatal(err)
 		}
+
+		classes = append(classes, v.Classes...)
 	}
-	return xmlContent
+	return classes
+}
+
+func renderXML(classes []Class) []byte {
+	v := AdxResult{
+		Classes: classes,
+	}
+	result, err := xml.MarshalIndent(v, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return result
+}
+
+func findGenerator(conf string, lang string) (generator, bool) {
+	if conf != "" {
+		data, err := ioutil.ReadFile(conf)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var config map[string]Language
+		err = yaml.Unmarshal(data, &config)
+		if err != nil {
+			log.Fatal(err)
+		}
+		langConfig, ok := config[lang]
+		if ok {
+			return createCustomGen(langConfig), true
+		}
+		return nil, false
+	}
+	gen, ok := generators[lang]
+	return gen, ok
 }
 
 func main() {
@@ -553,20 +459,23 @@ func main() {
 	flag.Var(&xmlFiles, "xml", "the input XML file(s)")
 
 	title := flag.String("title", "", "the document title")
+	conf := flag.String("conf", "", "the configuration file for the custom languages")
 	out := flag.String("out", "", "the output file (the format is based on its extension)")
 	flag.Parse()
-	gen, ok := generators[*lang]
+	gen, ok := findGenerator(*conf, *lang)
 	if !ok {
 		fmt.Printf("Can't find a documentation generator for %s\n\n", *lang)
 		printUsage()
 	} else {
-		xmlContent := getXMLContent(srcDirs, xmlFiles, gen)
+		intermediateContent := getIntermediateContent(srcDirs, gen)
+		classes := gen.genClasses(intermediateContent)
+		combined := combineClasses(classes, xmlFiles)
 		createDir(filepath.Dir(*out))
 		ext := filepath.Ext(*out)
 		if ext == ".xml" {
-			save(xmlContent, *out)
+			save(renderXML(combined), *out)
 		} else {
-			html := renderHTML(*title, normalize(gen.genClasses(xmlContent)))
+			html := renderHTML(*title, normalize(combined))
 			if ext == ".html" {
 				save(html, *out)
 			} else if ext == ".pdf" {
