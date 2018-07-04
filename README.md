@@ -72,10 +72,11 @@ class Foo(private val prop: String) {
 the optional *@constructor* tag to identify that the constructor is implicitly defined
 with the *@property* list as its arguments.
 
-The configuration file has the following YAML format:
+The configuration file has the following YAML format (see fixtures/config.yaml as an example):
 
 ```
 <language_name>:
+  extensions: [list of extensions]
   docstrings:
     type: [block|line]
     format: /** */
