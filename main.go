@@ -164,11 +164,9 @@ type CompoundDef struct {
 
 func genDoxyMethodReturn(member MemberDef, returnDesc template.HTML) Returns {
 	returnType := getText(member.Type.RawXML)
-	noReturnInfo := returnType == "" && returnDesc == ""
 	return Returns{
 		Type:        returnType,
 		Description: returnDesc,
-		Skip:        returnType == "void" || noReturnInfo,
 	}
 }
 
@@ -354,6 +352,12 @@ func normalize(classes []Class) map[string][]Class {
 		}
 		if cls.Ref == "" {
 			cls.Ref = ns + cls.Name
+		}
+		for i, method := range cls.Methods {
+			returnType := method.Returns.Type
+			returnDesc := method.Returns.Description
+			noReturnInfo := returnType == "" && returnDesc == ""
+			cls.Methods[i].Returns.Skip = returnType == "void" || noReturnInfo
 		}
 		namespaces[ns] = append(namespaces[ns], cls)
 	}
