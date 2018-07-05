@@ -42,3 +42,13 @@ func TestCombineXML(t *testing.T) {
 		t.Fatalf("XML output doesn't match. Expected:\n%s\nGot:\n%s\n", xml, str)
 	}
 }
+
+func TestEmptyIntermediate(t *testing.T) {
+	gen, ok := findGenerator("fixtures/config.yaml", "kotlin")
+	if !ok {
+		t.Fatal("Couldn't find kotlin configuration")
+	}
+	gen.genClasses(nil)
+	generators["js"].genClasses(nil)
+	generators["java"].genClasses(nil)
+}

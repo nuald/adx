@@ -13,12 +13,15 @@ func (j js) genClasses(xmlContent []byte) []Class {
 		Classes []Class  `xml:"classes"`
 	}
 
-	var v Result
-	if err := xml.Unmarshal(xmlContent, &v); err != nil {
-		log.Fatal(err)
+	if xmlContent != nil {
+		var v Result
+		if err := xml.Unmarshal(xmlContent, &v); err != nil {
+			log.Fatal(err)
+		}
+		return v.Classes
 	}
 
-	return v.Classes
+	return nil
 }
 
 func (j js) genIntermediate(srcDir string) []byte {

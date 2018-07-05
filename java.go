@@ -14,15 +14,17 @@ func (j java) genClasses(xmlContent []byte) []Class {
 		Defs    []CompoundDef `xml:"compounddef"`
 	}
 
-	var v Result
-	if err := xml.Unmarshal(xmlContent, &v); err != nil {
-		log.Fatal(err)
-	}
-
 	var classes []Class
-	for _, def := range v.Defs {
-		if def.Kind == "class" {
-			classes = append(classes, genDoxyClass(def))
+	if xmlContent != nil {
+		var v Result
+		if err := xml.Unmarshal(xmlContent, &v); err != nil {
+			log.Fatal(err)
+		}
+
+		for _, def := range v.Defs {
+			if def.Kind == "class" {
+				classes = append(classes, genDoxyClass(def))
+			}
 		}
 	}
 
