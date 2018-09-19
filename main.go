@@ -288,7 +288,7 @@ func renderHTML(title string, namespaces map[string][]Class) []byte {
 
 func printUsage() {
 	fmt.Println("Usage: adx [-conf=(yaml-file)] -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])")
-	fmt.Println("Produces the code's auto-generated documentation in HTML, PDF or original XML.")
+	fmt.Println("Produces the code's auto-generated documentation in HTML, PDF or XML.")
 	fmt.Println()
 	fmt.Println("Flags:")
 	flag.PrintDefaults()

@@ -1,5 +1,5 @@
 # adx
-Produces the code's auto-generated documentation in HTML, PDF or original XML.
+Produces the code's auto-generated documentation in HTML, PDF or XML.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ Please use the tool's flags to generate the corresponding output:
 
 ```
 Usage: adx [-conf=(yaml-file)] -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])
-Produces the code's auto-generated documentation in HTML, PDF or original XML.
+Produces the code's auto-generated documentation in HTML, PDF or XML.
 
 Flags:
   -conf string
@@ -80,8 +80,9 @@ class Foo(private val prop: String) {
 }
 ```
 
-*Class:* and *Method:* markers are used to determine the block context. Classes may have
-the optional *@constructor* tag to identify that the constructor is implicitly defined
+*Class:*, *Method:* (*Static Method:*) and *Property:* (*Static Property:*) markers
+are used to determine the block context. Classes may have the optional
+*@constructor* tag to identify that the constructor is implicitly defined
 with the *@property* list as its arguments.
 
 The configuration file has the following YAML format (see fixtures/config.yaml as an example):
