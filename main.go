@@ -398,6 +398,7 @@ func combineClasses(classes []Class, xmlFiles arrayFlags) []Class {
 	var v AdxResult
 
 	for _, xmlFile := range xmlFiles {
+		// #nosec
 		xmlContent, err := ioutil.ReadFile(xmlFile)
 		if err != nil {
 			log.Fatal(err)
@@ -425,6 +426,7 @@ func renderXML(classes []Class) []byte {
 
 func findGenerator(conf string, lang string) (generator, bool) {
 	if conf != "" {
+		// #nosec
 		data, err := ioutil.ReadFile(conf)
 		if err != nil {
 			log.Fatal(err)

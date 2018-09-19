@@ -1,0 +1,55 @@
+<adx>
+  <classes>
+    <name>Bar</name>
+    <description>Bar type.</description>
+    <access></access>
+    <virtual></virtual>
+    <fires></fires>
+    <functions>
+      <name>staticMethod</name>
+      <description>Static method.</description>
+      <access>static</access>
+      <virtual></virtual>
+      <parameters>
+        <name>value</name>
+        <type></type>
+        <description>The value.</description>
+        <default></default>
+        <optional></optional>
+        <nullable></nullable>
+      </parameters>
+      <returns>
+        <type></type>
+        <description>A Bar instance.</description>
+        <Skip>false</Skip>
+      </returns>
+    </functions>
+    <functions>
+      <name>instanceMethod</name>
+      <description>Instance method.</description>
+      <access></access>
+      <virtual></virtual>
+      <parameters>
+        <name>value</name>
+        <type></type>
+        <description>The value.</description>
+        <default></default>
+        <optional></optional>
+        <nullable></nullable>
+      </parameters>
+      <returns>
+        <type></type>
+        <description>The string.</description>
+        <Skip>false</Skip>
+      </returns>
+    </functions>
+    <properties>
+      <name>STATIC_PROP</name>
+      <description>Static property.</description>
+      <access>static</access>
+      <virtual></virtual>
+      <type></type>
+    </properties>
+    <Ref></Ref>
+  </classes>
+</adx>

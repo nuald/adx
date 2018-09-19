@@ -6,18 +6,24 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
 var classToken = "Class:"
 var methodToken = "Method:"
+var staticMethodToken = "Static Method:"
+var propertyToken = "Property:"
+var staticPropertyToken = "Static Property:"
 
 // Language configuration
 type Language struct {
 	Extensions []string
 	Docstrings struct {
-		Type   string
-		Format string
+		Type      string
+		Format    string
+		Parameter string
+		Return    string
 	}
 }
 
@@ -42,6 +48,7 @@ func (c custom) genIntermediate(srcDir string) []byte {
 			ext := filepath.Ext(info.Name())
 			for _, possibleExt := range c.language.Extensions {
 				if possibleExt == ext {
+					// #nosec
 					file, err := ioutil.ReadFile(path)
 					if err != nil {
 						return err
@@ -121,30 +128,50 @@ func extractLines(lines []string, begin string) [][]string {
 	return result
 }
 
-func findMethodTokens(method *Method, line string) bool {
-	if method != nil {
-		paramToken := "@param"
-		returnToken := "@return"
+func reSubMatchMap(r *regexp.Regexp, str string) map[string]string {
+	match := r.FindStringSubmatch(str)
+	if match != nil {
+		subMatchMap := make(map[string]string)
+		for i, name := range r.SubexpNames() {
+			if i != 0 {
+				subMatchMap[name] = match[i]
+			}
+		}
 
-		if strings.HasPrefix(line, paramToken) {
-			tokens := strings.SplitN(
-				strings.TrimSpace(line[len(paramToken):]), " ", 2)
+		return subMatchMap
+	}
+	return nil
+}
+
+func findMethodTokens(context *string, method *Method, line string,
+	paramRe *regexp.Regexp, returnRe *regexp.Regexp) *string {
+	if context != nil {
+		if *context != methodToken {
+			return context
+		}
+	}
+
+	if method != nil {
+		parameter := reSubMatchMap(paramRe, line)
+		returnValue := reSubMatchMap(returnRe, line)
+		if parameter != nil {
 			method.Parameters = append(method.Parameters, Parameter{
-				Name:        tokens[0],
-				Description: tokens[1],
+				Name:        parameter["name"],
+				Description: parameter["description"],
 			})
-		} else if strings.HasPrefix(line, returnToken) {
+		} else if returnValue != nil {
 			// #nosec
 			method.Returns = Returns{
 				Description: template.HTML(
-					strings.TrimSpace(line[len(returnToken):])),
+					strings.TrimSpace(returnValue["description"])),
 			}
 		} else {
-			return false
+			return context
 		}
-		return true
+		// Any token means that's the method description is finished
+		return nil
 	}
-	return false
+	return context
 }
 
 func findClassTokens(cls *Class, line string) bool {
@@ -176,17 +203,28 @@ func findClassTokens(cls *Class, line string) bool {
 	return true
 }
 
-func appendClass(classes []Class, cls *Class, method *Method) []Class {
+func addMethod(cls *Class, method *Method) {
 	if method != nil {
 		cls.Methods = append(cls.Methods, *method)
 	}
+}
+
+func addProperty(cls *Class, property *Property) {
+	if property != nil {
+		cls.Properties = append(cls.Properties, *property)
+	}
+}
+
+func appendClass(classes []Class, cls *Class, method *Method, property *Property) []Class {
+	addMethod(cls, method)
+	addProperty(cls, property)
 	if cls != nil {
 		classes = append(classes, *cls)
 	}
 	return classes
 }
 
-func updateDescriptions(line string, context *string, cls *Class, method *Method) {
+func updateDescriptions(line string, context *string, cls *Class, method *Method, property *Property) {
 	if context != nil {
 		if *context == classToken {
 			if cls.Description == "" {
@@ -202,19 +240,57 @@ func updateDescriptions(line string, context *string, cls *Class, method *Method
 				method.Description += "\n" + line
 			}
 		}
+		if *context == propertyToken {
+			if property.Description == "" {
+				property.Description = line
+			} else {
+				property.Description += "\n" + line
+			}
+		}
 	}
 }
 
-func findClasses(blocks [][]string) []Class {
+func getAccessModifier(isStatic bool) string {
+	if isStatic {
+		return "static"
+	}
+	return ""
+}
+
+func newMethod(line string, isStaticMethod bool) Method {
+	prefix := methodToken
+	if isStaticMethod {
+		prefix = staticMethodToken
+	}
+	return Method{
+		Name:   strings.TrimSpace(line[len(prefix):]),
+		Access: getAccessModifier(isStaticMethod),
+	}
+}
+
+func newProperty(line string, isStaticProperty bool) Property {
+	prefix := propertyToken
+	if isStaticProperty {
+		prefix = staticPropertyToken
+	}
+	return Property{
+		Name:   strings.TrimSpace(line[len(prefix):]),
+		Access: getAccessModifier(isStaticProperty),
+	}
+}
+
+func findClasses(blocks [][]string, paramRe *regexp.Regexp, returnRe *regexp.Regexp) []Class {
 	var classes []Class
 	var cls *Class
 	var method *Method
+	var property *Property
 	for _, block := range blocks {
 		var context *string
 		for _, line := range block {
 			if strings.HasPrefix(line, classToken) {
-				classes = appendClass(classes, cls, method)
+				classes = appendClass(classes, cls, method, property)
 				method = nil
+				property = nil
 				cls = &Class{
 					Name: strings.TrimSpace(line[len(classToken):]),
 				}
@@ -222,27 +298,33 @@ func findClasses(blocks [][]string) []Class {
 				continue
 			}
 			if cls != nil {
-				if strings.HasPrefix(line, methodToken) {
-					if method != nil {
-						cls.Methods = append(cls.Methods, *method)
-					}
-					method = &Method{
-						Name: strings.TrimSpace(line[len(methodToken):]),
-					}
+				isMethod := strings.HasPrefix(line, methodToken)
+				isStaticMethod := strings.HasPrefix(line, staticMethodToken)
+				if isMethod || isStaticMethod {
+					addMethod(cls, method)
+					newMethodVar := newMethod(line, isStaticMethod)
+					method = &newMethodVar
 					context = &methodToken
+					continue
+				}
+				isProperty := strings.HasPrefix(line, propertyToken)
+				isStaticProperty := strings.HasPrefix(line, staticPropertyToken)
+				if isProperty || isStaticProperty {
+					addProperty(cls, property)
+					newPropertyVar := newProperty(line, isStaticProperty)
+					property = &newPropertyVar
+					context = &propertyToken
 					continue
 				}
 				if findClassTokens(cls, line) {
 					context = nil
 				}
 			}
-			if findMethodTokens(method, line) {
-				context = nil
-			}
-			updateDescriptions(line, context, cls, method)
+			context = findMethodTokens(context, method, line, paramRe, returnRe)
+			updateDescriptions(line, context, cls, method, property)
 		}
 	}
-	classes = appendClass(classes, cls, method)
+	classes = appendClass(classes, cls, method, property)
 	return classes
 }
 
@@ -271,5 +353,7 @@ func (c custom) genClasses(content []byte) []Class {
 		}
 		blocks = extractLines(lines, begin)
 	}
-	return findClasses(blocks)
+	paramRe := regexp.MustCompile(c.language.Docstrings.Parameter)
+	returnRe := regexp.MustCompile(c.language.Docstrings.Return)
+	return findClasses(blocks, paramRe, returnRe)
 }

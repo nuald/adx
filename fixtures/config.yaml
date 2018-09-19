@@ -3,8 +3,19 @@ kotlin:
   docstrings:
     type: block
     format: /** * */
+    parameter: '@param (?P<name>\w+)\s?(?P<description>.*)'
+    return: '@return\s?(?P<description>.*)'
 cpp:
   extensions: ['.h']
   docstrings:
     type: line
     format: //
+    parameter: '@param (?P<name>\w+)\s?(?P<description>.*)'
+    return: '@return\s?(?P<description>.*)'
+swift:
+  extensions: ['.swift']
+  docstrings:
+    type: block
+    format: /** * */
+    parameter: '- Parameter (?P<name>\w+):\s?(?P<description>.*)'
+    return: '- Returns:\s?(?P<description>.*)'

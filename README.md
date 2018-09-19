@@ -38,6 +38,18 @@ Flags:
       the input XML file(s)
 ```
 
+## Development Notes
+
+`Gradle` is utilized to perform various tasks related to development.
+
+Unit-testing:
+
+    $ gradle tests
+
+Local installation:
+
+    $ gradle install
+
 ## Custom Languages Support
 
 Custom languages are parsed based on the configuration files. The code should be documented
@@ -80,4 +92,9 @@ The configuration file has the following YAML format (see fixtures/config.yaml a
   docstrings:
     type: [block|line]
     format: /** */
+    parameter: '@param (?P<name>\w+)\s?(?P<description>.*)'
+    return: '@return\s?(?P<description>.*)'
 ```
+
+Please note that `parameter` and `return` are regular expressions that should have
+the *name* (not for `return`) and *description* capture groups.
