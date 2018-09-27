@@ -81,15 +81,20 @@ type generator interface {
 	genClasses(xmlContent []byte) []Class
 }
 
+var compoundRe = regexp.MustCompile("<ref refid=\"(\\w+)\" kindref=\"compound\">(\\w+)</ref>")
+
 func getText(raw string) template.HTML {
-	r := regexp.MustCompile("<ref refid=\"(\\w+)\" kindref=\"compound\">(\\w+)</ref>")
-	m := r.FindStringSubmatch(raw)
+	m := compoundRe.FindStringSubmatch(raw)
 	if m != nil {
 		// #nosec
 		return template.HTML(fmt.Sprintf("<a href=\"#%s\">%s</a>", m[1], m[2]))
 	}
 	// #nosec
 	return template.HTML(raw)
+}
+
+func getPlainText(raw string) string {
+	return compoundRe.ReplaceAllString(raw, "$2")
 }
 
 // Raw XML info
@@ -142,7 +147,7 @@ type MemberDef struct {
 	Kind         string       `xml:"kind,attr"`
 	Name         string       `xml:"name"`
 	Type         Raw          `xml:"type"`
-	Description  string       `xml:"briefdescription>para"`
+	Description  Raw          `xml:"briefdescription>para"`
 	Parameters   []Param      `xml:"param"`
 	DetailedDesc DetailedDesc `xml:"detaileddescription"`
 }
@@ -159,7 +164,7 @@ type CompoundDef struct {
 	Ref         string       `xml:"id,attr"`
 	Name        string       `xml:"compoundname"`
 	Sections    []SectionDef `xml:"sectiondef"`
-	Description string       `xml:"briefdescription>para"`
+	Description Raw          `xml:"briefdescription>para"`
 }
 
 func genDoxyMethodReturn(member MemberDef, returnDesc template.HTML) Returns {
@@ -205,7 +210,7 @@ func genDoxyMethod(member MemberDef, sectionKind string) Method {
 	}
 	return Method{
 		Name:        member.Name,
-		Description: member.Description,
+		Description: getPlainText(member.Description.RawXML),
 		Returns:     ret,
 		Parameters:  parameters,
 		Access:      access,
@@ -215,7 +220,7 @@ func genDoxyMethod(member MemberDef, sectionKind string) Method {
 func genDoxyClass(def CompoundDef) Class {
 	cls := Class{
 		Name:        def.Name,
-		Description: def.Description,
+		Description: getPlainText(def.Description.RawXML),
 		Ref:         def.Ref,
 	}
 	for _, section := range def.Sections {
@@ -224,7 +229,7 @@ func genDoxyClass(def CompoundDef) Class {
 			for _, member := range section.Members {
 				prop := Property{
 					Name:        member.Name,
-					Description: member.Description,
+					Description: getPlainText(member.Description.RawXML),
 					Type:        getText(member.Type.RawXML),
 					Access:      "static",
 				}
