@@ -31,4 +31,11 @@ public class Bar {
     public func instanceMethod(_ value: String) -> String {
         return value
     }
+
+    /**
+     * Constructor: init
+     * Bar constructor.
+     */
+    public init() {
+    }
 }

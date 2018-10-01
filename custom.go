@@ -12,6 +12,7 @@ import (
 
 var classToken = "Class:"
 var methodToken = "Method:"
+var constructorToken = "Constructor:"
 var staticMethodToken = "Static Method:"
 var propertyToken = "Property:"
 var staticPropertyToken = "Static Property:"
@@ -205,7 +206,11 @@ func findClassTokens(cls *Class, line string) bool {
 
 func addMethod(cls *Class, method *Method) {
 	if method != nil {
-		cls.Methods = append(cls.Methods, *method)
+		if method.IsCtor {
+			cls.Constructors = append(cls.Constructors, *method)
+		} else {
+			cls.Methods = append(cls.Methods, *method)
+		}
 	}
 }
 
@@ -257,14 +262,17 @@ func getAccessModifier(isStatic bool) string {
 	return ""
 }
 
-func newMethod(line string, isStaticMethod bool) Method {
+func newMethod(line string, isStaticMethod bool, isCtor bool) Method {
 	prefix := methodToken
 	if isStaticMethod {
 		prefix = staticMethodToken
+	} else if isCtor {
+		prefix = constructorToken
 	}
 	return Method{
 		Name:   strings.TrimSpace(line[len(prefix):]),
 		Access: getAccessModifier(isStaticMethod),
+		IsCtor: isCtor,
 	}
 }
 
@@ -277,6 +285,17 @@ func newProperty(line string, isStaticProperty bool) Property {
 		Name:   strings.TrimSpace(line[len(prefix):]),
 		Access: getAccessModifier(isStaticProperty),
 	}
+}
+
+func findMethodDeclaration(line string) *Method {
+	isMethod := strings.HasPrefix(line, methodToken)
+	isStaticMethod := strings.HasPrefix(line, staticMethodToken)
+	isCtor := strings.HasPrefix(line, constructorToken)
+	if isMethod || isStaticMethod || isCtor {
+		methodVar := newMethod(line, isStaticMethod, isCtor)
+		return &methodVar
+	}
+	return nil
 }
 
 func findClasses(blocks [][]string, paramRe *regexp.Regexp, returnRe *regexp.Regexp) []Class {
@@ -298,12 +317,9 @@ func findClasses(blocks [][]string, paramRe *regexp.Regexp, returnRe *regexp.Reg
 				continue
 			}
 			if cls != nil {
-				isMethod := strings.HasPrefix(line, methodToken)
-				isStaticMethod := strings.HasPrefix(line, staticMethodToken)
-				if isMethod || isStaticMethod {
+				if newMethodVar := findMethodDeclaration(line); newMethodVar != nil {
 					addMethod(cls, method)
-					newMethodVar := newMethod(line, isStaticMethod)
-					method = &newMethodVar
+					method = newMethodVar
 					context = &methodToken
 					continue
 				}

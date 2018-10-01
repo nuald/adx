@@ -60,6 +60,7 @@ type Method struct {
 	Virtual     string      `xml:"virtual"`
 	Parameters  []Parameter `xml:"parameters"`
 	Returns     Returns     `xml:"returns"`
+	IsCtor      bool        `xml:"-"`
 }
 
 // Class info

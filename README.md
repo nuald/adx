@@ -80,7 +80,7 @@ class Foo(private val prop: String) {
 }
 ```
 
-*Class:*, *Method:* (*Static Method:*) and *Property:* (*Static Property:*) markers
+*Class:*, *Method:* (*Static Method:*, *Constructor:*) and *Property:* (*Static Property:*) markers
 are used to determine the block context. Classes may have the optional
 *@constructor* tag to identify that the constructor is implicitly defined
 with the *@property* list as its arguments.

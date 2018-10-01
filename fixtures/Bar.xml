@@ -5,6 +5,17 @@
     <access></access>
     <virtual></virtual>
     <fires></fires>
+    <constructor>
+      <name>init</name>
+      <description>Bar constructor.</description>
+      <access></access>
+      <virtual></virtual>
+      <returns>
+        <type></type>
+        <description></description>
+        <Skip>false</Skip>
+      </returns>
+    </constructor>
     <functions>
       <name>staticMethod</name>
       <description>Static method.</description>
