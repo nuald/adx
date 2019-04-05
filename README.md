@@ -64,7 +64,7 @@ Code sample:
  * Foo demo class
  *
  * @property prop The sample property.
- * @constructor Build an ThreeDS2Widget class instance.
+ * @constructor Build an Foo class instance.
  */
 class Foo(private val prop: String) {
 

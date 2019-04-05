@@ -53,7 +53,7 @@
     <fires></fires>
     <constructor>
       <name></name>
-      <description>Build an ThreeDS2Widget class instance.</description>
+      <description>Build an Foo class instance.</description>
       <access></access>
       <virtual></virtual>
       <parameters>
