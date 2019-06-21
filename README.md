@@ -6,7 +6,8 @@ Produces the code's auto-generated documentation in HTML, PDF or XML.
 The tool utilizes Doxygen and JsDoc3 command line utilities, please be sure
 to install those first, e.g. for macOS:
 
-    $ brew install jsdoc3 doxygen
+    $ brew install doxygen node
+    $ npm i jsdoc -g
 
 Please note the tool uses `xsltproc` utility, so be sure that it's available
 in PATH.
