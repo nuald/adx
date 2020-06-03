@@ -6,7 +6,7 @@ task setupCore(type: Exec) {
 	description 'Installs the core packages.'
 
 	commandLine 'go', 'get', '-u',
-		'github.com/golangci/golangci-lint/cmd/golangci-lint',
+		'github.com/golangci/golangci-lint/cmd/golangci-lint@v1.24.0',
 		'github.com/go-errors/errors',
 		'github.com/go-bindata/go-bindata/...',
 		'gopkg.in/yaml.v2'
