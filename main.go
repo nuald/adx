@@ -294,7 +294,7 @@ func renderHTML(title string, namespaces map[string][]Class) []byte {
 }
 
 func printUsage() {
-	fmt.Println("Usage: adx [-conf=(yaml-file)] -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])")
+	fmt.Println("Usage: adx [-conf=(yaml-file)] -lang=(lang) [-jsconf=(jsdoc-conf)] [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])")
 	fmt.Println("Produces the code's auto-generated documentation in HTML, PDF or XML.")
 	fmt.Println()
 	fmt.Println("Flags:")
@@ -473,7 +473,7 @@ func main() {
 
 	title := flag.String("title", "", "the document title")
 	conf := flag.String("conf", "", "the configuration file for the custom languages")
-	js_conf := flag.String("jsconf", "", "the configuration file for the JavaScript")
+	js_conf := flag.String("jsconf", "", "the JSDoc configuration file")
 	out := flag.String("out", "", "the output file (the format is based on its extension)")
 	flag.Parse()
 	gen, ok := findGenerator(*conf, *lang)

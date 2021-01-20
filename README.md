@@ -21,22 +21,24 @@ in PATH.
 Please use the tool's flags to generate the corresponding output:
 
 ```
-Usage: adx [-conf=(yaml-file)] -lang=(lang) [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])
+Usage: adx [-conf=(yaml-file)] -lang=(lang) [-jsconf=(jsdoc-conf)] [-src=(src-dir)]+ [-xml=(xml-file)]+ -title=(title) -out=(out.[html|pdf|xml])
 Produces the code's auto-generated documentation in HTML, PDF or XML.
 
 Flags:
   -conf string
-      the configuration file for the custom languages
+    	the configuration file for the custom languages
+  -jsconf string
+    	the JSDoc configuration file
   -lang string
-      the source code programming language (js, java)
+    	the source code programming language (js, java)
   -out string
-      the output file (the format is based on its extension)
+    	the output file (the format is based on its extension)
   -src value
-      the source code dir(s)
+    	the source code dir(s)
   -title string
-      the document title
+    	the document title
   -xml value
-      the input XML file(s)
+    	the input XML file(s)
 ```
 
 ## Development Notes
