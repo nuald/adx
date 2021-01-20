@@ -41,15 +41,15 @@ Flags:
 
 ## Development Notes
 
-`Gradle` is utilized to perform various tasks related to development.
+`make` is utilized to perform various tasks related to development.
 
 Unit-testing:
 
-    $ gradle tests
+    $ make tests
 
 Local installation:
 
-    $ gradle install
+    $ make install
 
 ## Custom Languages Support
 

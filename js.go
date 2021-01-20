@@ -5,7 +5,13 @@ import (
 	"log"
 )
 
-type js struct{}
+type js struct {
+	conf string
+}
+
+func (j *js) setConf(conf string) {
+	j.conf = conf
+}
 
 func (j js) genClasses(xmlContent []byte) []Class {
 	type Result struct {
@@ -25,8 +31,12 @@ func (j js) genClasses(xmlContent []byte) []Class {
 }
 
 func (j js) genIntermediate(srcDir string) []byte {
-	cmd := newCmd("jsdoc", "-t", "templates/haruki", srcDir, "-d", "console",
-		"-q", "format=xml")
+	args := []string{"-t", "templates/haruki", srcDir, "-d", "console",
+		"-q", "format=xml"}
+	if j.conf != "" {
+		args = append(args, "-c", j.conf)
+	}
+	cmd := newCmd("jsdoc", args...)
 	out, err := cmd.Output()
 	if err != nil {
 		log.Fatal(err)

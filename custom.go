@@ -38,6 +38,8 @@ func createCustomGen(language Language) generator {
 	return gen
 }
 
+func (c custom) setConf(conf string) {}
+
 func (c custom) genIntermediate(srcDir string) []byte {
 	var content []byte
 

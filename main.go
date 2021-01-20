@@ -80,6 +80,7 @@ type generator interface {
 	genIntermediate(srcDir string) []byte
 	combineIntermediate(a []byte, b []byte) []byte
 	genClasses(xmlContent []byte) []Class
+	setConf(conf string)
 }
 
 var compoundRe = regexp.MustCompile("<ref refid=\"(\\w+)\" kindref=\"compound\">(\\w+)</ref>")
@@ -472,6 +473,7 @@ func main() {
 
 	title := flag.String("title", "", "the document title")
 	conf := flag.String("conf", "", "the configuration file for the custom languages")
+	js_conf := flag.String("jsconf", "", "the configuration file for the JavaScript")
 	out := flag.String("out", "", "the output file (the format is based on its extension)")
 	flag.Parse()
 	gen, ok := findGenerator(*conf, *lang)
@@ -479,6 +481,9 @@ func main() {
 		fmt.Printf("Can't find a documentation generator for %s\n\n", *lang)
 		printUsage()
 	} else {
+		if *lang == "js" {
+			gen.setConf(*js_conf)
+		}
 		intermediateContent := getIntermediateContent(srcDirs, gen)
 		classes := gen.genClasses(intermediateContent)
 		combined := combineClasses(classes, xmlFiles)

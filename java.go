@@ -8,6 +8,8 @@ import (
 
 type java struct{}
 
+func (j java) setConf(conf string) {}
+
 func (j java) genClasses(xmlContent []byte) []Class {
 	type Result struct {
 		XMLName xml.Name      `xml:"doxygen"`
