@@ -93,7 +93,7 @@ func dataDefaultHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/default.html", size: 2686, mode: os.FileMode(420), modTime: time.Unix(1611168514, 0)}
+	info := bindataFileInfo{name: "data/default.html", size: 2686, mode: os.FileMode(420), modTime: time.Unix(1698879908, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -113,7 +113,7 @@ func dataJavaDoxyfile() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/java.doxyfile", size: 109398, mode: os.FileMode(420), modTime: time.Unix(1611168514, 0)}
+	info := bindataFileInfo{name: "data/java.doxyfile", size: 109398, mode: os.FileMode(420), modTime: time.Unix(1698879908, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

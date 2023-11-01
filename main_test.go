@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -13,7 +13,7 @@ func TestKotlin(t *testing.T) {
 	intermediateContent := getIntermediateContent([]string{"fixtures/"}, gen)
 	classes := gen.genClasses(intermediateContent)
 	xml := string(renderXML(classes))
-	data, err := ioutil.ReadFile("fixtures/Foo.xml")
+	data, err := os.ReadFile("fixtures/Foo.xml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestSwift(t *testing.T) {
 	intermediateContent := getIntermediateContent([]string{"fixtures/"}, gen)
 	classes := gen.genClasses(intermediateContent)
 	xml := string(renderXML(classes))
-	data, err := ioutil.ReadFile("fixtures/Bar.xml")
+	data, err := os.ReadFile("fixtures/Bar.xml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestCombineXML(t *testing.T) {
 	xmlFiles := arrayFlags{"fixtures/Foo.xml"}
 	combined := combineClasses(classes, xmlFiles)
 	xml := string(renderXML(combined))
-	data, err := ioutil.ReadFile("fixtures/Combined.xml")
+	data, err := os.ReadFile("fixtures/Combined.xml")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -302,7 +301,7 @@ func printUsage() {
 }
 
 func save(content []byte, out string) {
-	if err := ioutil.WriteFile(out, content, 0644); err != nil {
+	if err := os.WriteFile(out, content, 0644); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -316,7 +315,7 @@ func savePdf(html []byte, out string) {
 		}
 	}
 
-	tmpfile, err := ioutil.TempFile("", "tmp")
+	tmpfile, err := os.CreateTemp("", "tmp")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -406,7 +405,7 @@ func combineClasses(classes []Class, xmlFiles arrayFlags) []Class {
 
 	for _, xmlFile := range xmlFiles {
 		// #nosec
-		xmlContent, err := ioutil.ReadFile(xmlFile)
+		xmlContent, err := os.ReadFile(xmlFile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -434,7 +433,7 @@ func renderXML(classes []Class) []byte {
 func findGenerator(conf string, lang string) (generator, bool) {
 	if conf != "" {
 		// #nosec
-		data, err := ioutil.ReadFile(conf)
+		data, err := os.ReadFile(conf)
 		if err != nil {
 			log.Fatal(err)
 		}

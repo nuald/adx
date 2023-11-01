@@ -1,6 +1,6 @@
 setupCore:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-		| sh -s -- -b $(shell go env GOPATH)/bin v1.35.2
+		| sh -s -- -b $(shell go env GOPATH)/bin v1.55.1
 	go get -u \
 		github.com/go-errors/errors \
 		github.com/go-bindata/go-bindata/... \
